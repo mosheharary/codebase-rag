@@ -7,8 +7,8 @@ from langfuse import Langfuse
 from langfuse.callback import CallbackHandler as LangfuseCallbackHandler
 import logging
 
-class JavaFileAnalyzer:
-    def __init__(self, logger, model,embedding_model,openai_api_key: str, langfuse_public_key: str, langfuse_secret_key: str):
+class LlmClient:
+    def __init__(self, logger, model,embedding_model,openai_api_key: str):
         """
         Initialize the analyzer with API keys and setup LangChain components.
         """

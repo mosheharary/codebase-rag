@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import numpy as np
 from OpensearchClient import OpensearchClient
 from Neo4jGraphClient import Neo4jGraphClient
+from PineconeClient import PineconeClient
 from LlmClient import LlmClient
 import logging
 import tiktoken
@@ -58,6 +59,7 @@ neo4j_host=os.getenv("NEO4J_HOST")
 neo4j_port=os.getenv("NEO4J_PORT")
 neo4j_pass=os.getenv("NEO4J_PASS")
 neo4j = Neo4jGraphClient(f"bolt://{neo4j_host}:{neo4j_port}", 'neo4j', neo4j_pass, logger)
+pinecone = PineconeClient(host=f"http://{os.getenv('PINECONE_HOST')}:{os.getenv('PINECONE_PORT')}",logger=logger)
 
 def count_tokens(text, model="gpt-3.5-turbo"):
     """Count the number of tokens in a text string."""
@@ -129,7 +131,7 @@ def query_openai(query, context, system_prompt):
         message += f"Basd on the following context:\n\n"
         message += f"Context: {context}"
 
-        return analyzer.query(message)
+        return analyzer.query_openai(message)
     except Exception as e:
         logger.error(f"Error querying OpenAI: {e}")
         return f"An error occurred while using OpenAI: {str(e)}"
@@ -175,7 +177,7 @@ if 'graph_search_length' not in st.session_state:
 if 'number_of_tokens' not in st.session_state:
     st.session_state.number_of_tokens = 0
 if 'use_gemini' not in st.session_state:
-    st.session_state.use_gemini = True
+    st.session_state.use_gemini = False
 
 
 # Main UI
@@ -275,7 +277,11 @@ else:
                     query=prompt,
                     query_vector=embedding,
                     k=st.session_state.top_es_k
-                )        
+                )       
+                pinecone_response = pinecone.search(os.getenv('PINECONE_INDEX'), embedding, top_k=st.session_state.top_es_k) 
+                for res in pinecone_response['matches']:
+                    if res['id'] not in file_paths:
+                        file_paths.append(res['id'])
             except Exception as e:
                 st.error(f"Error searching documents: {str(e)}")
                 file_paths = []
@@ -283,9 +289,9 @@ else:
             list_of_files = []
             list_of_files_from_es = []
             for path in file_paths:
-                list_of_files_from_es.append(path['path'])
-                list_of_files.append(path['path'])
-                for neo4j_path in neo4j.get_nodes_by_name_and_levels(path['path'], st.session_state.graph_search_length):
+                list_of_files_from_es.append(path)
+                list_of_files.append(path)
+                for neo4j_path in neo4j.get_nodes_by_name_and_levels(path, st.session_state.graph_search_length):
                     list_of_files.append(neo4j_path)
             
 

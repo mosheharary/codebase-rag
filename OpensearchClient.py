@@ -1,6 +1,8 @@
 from opensearchpy import OpenSearch, RequestError, NotFoundError
 import ssl
 import numpy as np
+import os
+
 
 class OpensearchClient:
     def __init__(self, hosts=['localhost:9200'], logger=None):
@@ -275,7 +277,7 @@ class OpensearchClient:
         )
         # Merge and deduplicate results using path as unique identifier
         merged_results = {}
-
+        merged_results_list = []
         # Process vector search results
         for hit in vector_search['hits']['hits']:
             path = hit['_source']['path']
@@ -286,6 +288,7 @@ class OpensearchClient:
                 'vector_score': hit['_score'],
                 'bm25_score': 0
             }
+            merged_results_list.append(merged_results[path]['path'])
 
         # Process BM25 search results
         for hit in bm25_search['hits']['hits']:
@@ -303,6 +306,11 @@ class OpensearchClient:
                     'vector_score': 0,
                     'bm25_score': hit['_score']
                 }
+                merged_results_list.append(merged_results[path]['path'])
+
+        #make sure merged_results_list is unique
+        merged_results_list = list(set(merged_results_list))
+        return merged_results_list
 
         # Normalize scores
         max_vector_score = max((r['vector_score'] for r in merged_results.values()), default=1)

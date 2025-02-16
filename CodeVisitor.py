@@ -1,3 +1,6 @@
+import javalang
+import os
+
 class CodeVisitor:
     """
     Visitor class to analyze Java code for both function calls and class usage.

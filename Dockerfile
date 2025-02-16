@@ -15,6 +15,7 @@ COPY app.py .
 COPY Neo4jGraphClient.py .
 COPY OpensearchClient.py .
 COPY LlmClient.py .
+COPY PineconeClient.py .
 COPY .env .
 
 # Expose the port that Streamlit will run on

@@ -13,6 +13,7 @@ from typing import List, Dict, Optional, Tuple
 from collections import defaultdict
 from Neo4jGraphClient import Neo4jGraphClient
 from OpensearchClient import OpensearchClient
+from PineconeClient import PineconeClient
 from CodeVisitor import CodeVisitor
 from LlmClient import LlmClient
 import openai
@@ -57,6 +58,7 @@ class JavaKnowledgeGraphBuilder:
 
         self.document_store = OpensearchClient(f"{os.getenv('OPENSEARCH_HOST')}:{os.getenv('OPENSEARCH_PORT')}",logger)
         self.analyzer=LlmClient(logger,self.model,self.embedding_model,self.api_key)
+        self.pinecone = PineconeClient(host=f"http://{os.getenv('PINECONE_HOST')}:{os.getenv('PINECONE_PORT')}",logger=logger)
         self.data_items = {}
         self.analyze_json_file()
 
@@ -325,7 +327,7 @@ class JavaKnowledgeGraphBuilder:
                                 continue
 
                         
-
+                        self.pinecone.upsert(os.getenv("PINECONE_INDEX"),embedding,default_path=relative_path,default_summary=summary)
                         analyze_java_info['embedding'] = embedding
                         analyze_java_info['file_path'] = relative_path
                         analyze_java_info['summary'] = summary                        
@@ -643,9 +645,9 @@ def main(directory: str, subdirectory: str, neo4j_uri: str, neo4j_user: str, neo
     
     # Visualize in Neo4j
         if subdirectory == "/":
-            kg_builder.build_neo4j_graph(parsed_files)
-
-            logger.info(f"Knowledge graph built and visualized for directory: {directory}")
+            if os.getenv("PROCESS_GRAPH") == "true":
+                kg_builder.build_neo4j_graph(parsed_files)
+                logger.info(f"Knowledge graph built and visualized for directory: {directory}")
     else:
         return
 
